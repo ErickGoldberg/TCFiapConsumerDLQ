@@ -1,4 +1,5 @@
 using MassTransit;
+using TCFiapConsumerDLQ.Extensions;
 using TCFiapConsumerDLQ.Workers;
 using TechChallenge.SDK;
 
@@ -19,16 +20,17 @@ var host = Host.CreateDefaultBuilder(args)
                     h.Password("guest");
                 });
 
-                cfg.ReceiveEndpoint("delete-contact-dlq-queue", e =>
-                {
-                    e.ConfigureConsumer<RemoveContactConsumerDlq>(context);
+                DlqEndpointConfigurator.ConfigureDlqEndpoint<RemoveContactConsumerDlq>(
+                    cfg, context,
+                    "delete-contact-dlq-queue",
+                    "delete-contact-dlx-exchange",
+                    "delete-contact-dlx");
 
-                    e.Bind("delete-contact-dlx-exchange", s =>
-                    {
-                        s.RoutingKey = "delete-contact-dlx"; 
-                        s.ExchangeType = RabbitMQ.Client.ExchangeType.Direct;
-                    });
-                });
+                DlqEndpointConfigurator.ConfigureDlqEndpoint<UpdateContactConsumerDlq>(
+                    cfg, context,
+                    "update-contact-dlq-queue",
+                    "update-contact-dlx-exchange",
+                    "update-contact-dlx");
             });
         });
 

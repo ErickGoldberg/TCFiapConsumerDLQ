@@ -4,33 +4,28 @@ using TechChallenge.SDK.Infrastructure.Persistence;
 
 namespace TCFiapConsumerDLQ.Workers
 {
-    public class RemoveContactConsumerDlq(ILogger<RemoveContactConsumerDlq> logger, IContactRepository contactRepository)
-        : IConsumer<RemoveContactMessage>
+    public class RemoveContactConsumerDlq : BaseDlqConsumer<RemoveContactMessage>
     {
-        public async Task Consume(ConsumeContext<RemoveContactMessage> context)
+        public RemoveContactConsumerDlq(ILogger<RemoveContactConsumerDlq> logger, IContactRepository contactRepository)
+            : base(logger, contactRepository)
         {
-            try
+        }
+
+        protected override async Task ProcessMessage(ConsumeContext<RemoveContactMessage> context)
+        {
+            var message = context.Message;
+            _logger.LogInformation($"Recebida solicitação para deletar o contato com ID: {message.ContactId}");
+
+            var contact = await _contactRepository.GetByIdAsync(message.ContactId);
+            if (contact == null)
             {
-                var message = context.Message;
-                logger.LogInformation($"Recebida solicitação para deletar o contato com ID: {message.ContactId}");
-
-                var contact = await contactRepository.GetByIdAsync(message.ContactId);
-                if (contact == null)
-                {
-                    logger.LogWarning($"Contato {message.ContactId} não encontrado!");
-                    return;
-                }
-
-                await contactRepository.DeleteAsync(contact);
-
-                await Task.Delay(500);
-                logger.LogInformation($"Contato {message.ContactId} removido com sucesso!");
+                _logger.LogWarning($"Contato {message.ContactId} não encontrado!");
+                return;
             }
-            catch (Exception ex)
-            {
-                logger.LogError($"Um erro ocorreu ao tentar remover contato. Message: {ex.Message} / StackTrace: {ex.StackTrace}");
-                throw;
-            }
+
+            await _contactRepository.DeleteAsync(contact);
+            await Task.Delay(500);
+            _logger.LogInformation($"Contato {message.ContactId} removido com sucesso!");
         }
     }
 }
