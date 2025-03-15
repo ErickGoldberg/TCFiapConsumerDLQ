@@ -19,12 +19,15 @@ var host = Host.CreateDefaultBuilder(args)
                     h.Password("guest");
                 });
 
-                cfg.ReceiveEndpoint("delete-contact-queue", e =>
+                cfg.ReceiveEndpoint("delete-contact-dlq-queue", e =>
                 {
                     e.ConfigureConsumer<RemoveContactConsumerDlq>(context);
 
-                    // DLQ Exchange 
-                    e.SetQueueArgument("x-dead-letter-exchange", "delete-contact-dlx-exchange");
+                    e.Bind("delete-contact-dlx-exchange", s =>
+                    {
+                        s.RoutingKey = "delete-contact-dlx"; 
+                        s.ExchangeType = RabbitMQ.Client.ExchangeType.Direct;
+                    });
                 });
             });
         });
